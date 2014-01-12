@@ -1,13 +1,13 @@
 #!/usr/bin/ksh
 #
-# lcd-control, version 0.2
-# written by Dirk Brenken (dibdot@gmail.com)
+# lcd-control, version 0.3
+# original versions by Dirk Brenken (dibdot@gmail.com)
 #
 # WARNING
 # ========
-# This is a developer version, at the time of writing it was only tested on a single TS-439 device.
+# This is a developer version, at the time of writing it was only tested on a TS-439 and TS-509 PRO.
 # Even though I use it in my productive environment, I strongly recommend that you only use it for further testing and debugging.
-# This script is only for QNAP-devices which running debian (stock QNAP firmware currently not supported!).
+# This script is only for QNAP-devices which running debian (possibly ubuntu)(stock QNAP firmware currently not supported!).
 # 
 # SCOPE
 # ======
@@ -20,7 +20,7 @@
 #
 # REQUIREMENTS
 # =============
-# - QNAP device with LCD display & debian
+# - QNAP device with LCD display & debian (possibly ubuntu)
 # - required debian packages (apt-get install): ksh
 # - optional debian packages (if you would like to use the distributed function library sample): hddtemp
 #
@@ -35,16 +35,12 @@
 # ==========
 # version 0.1: initial test release
 # version 0.2: fix trap/exit issues
+# version 0.3: fixed data refresh when lcd is off
 #
 # TODO
 # =====
-# - bugfixes
-# - error handling & logging
-# - handle external events (command line mode)
-# - ...
-#
-# Have fun!
-# Dirk
+# - add back mdadm support alongside zfs
+# - run moar tests!
 #
 
 # enable shell debug mode
@@ -107,9 +103,6 @@ MSG_FILLER=" "
 MSG_RT=0
 MSG_ID=0
 
-#-------------------------------------------------------------------------------
-# please do not change anything after this line ...
-#-------------------------------------------------------------------------------
 
 # function for basic trap handling
 #
@@ -263,6 +256,15 @@ do
         INDEX=$(( INDEX_OLD ))
         for BUTTON in ${INP_BUFFER}
         do
+			#if lcd was off, read data again and lights on
+			if (( LCD_ID == 1))
+			then
+			    # source/execute functions library
+				. ${INP_DIR}/${INP_FILE}
+				#turn lcd on 
+				printf "${LCD_ON}" > "${LCD_DEV}"
+			fi
+			
             # nav up
             if [[ "${BUTTON}" == "UP" ]]
             then
