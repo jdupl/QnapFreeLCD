@@ -1,7 +1,8 @@
 #!/usr/bin/ksh
 #
-# function library sample for lcd-control, version 0.1
-# written by Dirk Brenken (dibdot@gmail.com)
+# function library sample for lcd-control, version 0.2
+# original author Dirk Brenken (dibdot@gmail.com)
+# modified by Justin Duplessis (drfoliberg@gmail.com)
 #
 # GET STARTED
 # ============
@@ -18,9 +19,9 @@
 # CHANGELOG
 # ==========
 # version 0.1: initial test release
+# version 0.2: added usable functions for out-of-box usage
 #
 # Have fun!
-# Dirk
 # 
 
 # enable shell debug mode
