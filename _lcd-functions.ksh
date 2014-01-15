@@ -98,25 +98,71 @@ do
 done
 
 #-------------------------------------------------------------------------------
-# 4. Pool info (nfs or mdadm)
-# get zfs info TODO add mdadm back
+# 4. Pool info (zfs or mdadm)
+# detect which is installed and hoe many pools are present
+#-------------------------------------------------------------------------------
+#
+ZFS_POOLS=0
+MDADM_POOLS=0
+R_DEVICES=""
+
+if (( $(whereis zfs | wc -w) != 1 ))
+then
+	ZFS_POOLS=$(zpool list -H | wc -l)
+	echo "Found $ZFS_POOLS zfs pools !"
+fi
+
+if (( $(whereis mdadm | wc -w) != 1 ))
+then
+	MDADM_POOLS=$(ls /dev/md* | wc -w)
+	echo "Found $MDADM_POOLS mdadm pools !"
+fi
+
+#-------------------------------------------------------------------------------
+# 4.1 Pool info zfs
+# TODO add support for multiple pools ?
 #-------------------------------------------------------------------------------
 #
 # get current index count as start value
-INDEX=${#ROW[@]}
-# query
-PREV_TOTAL=0
-PREV_IDLE=0
-# result
-FREE=$(zpool list -H | cut -f 4)
-HEALTH=$(zpool list -H | cut -f 7)
-CAP=$(zpool list -H | cut -f 5)
-ROW[${INDEX}]="$(zpool list -H | cut -f 1) $(zpool list -H | cut -f 2)"
-(( INDEX ++ ))
-ROW[${INDEX}]="$FREE $CAP-$HEALTH"
-(( INDEX ++ ))
+if (( $ZFS_POOLS > 0 ))
+then
+	INDEX=${#ROW[@]}
+	# query
+	PREV_TOTAL=0
+	PREV_IDLE=0
+	FREE=$(zpool list -H | cut -f 4)
+	HEALTH=$(zpool list -H | cut -f 7)
+	CAP=$(zpool list -H | cut -f 5)
+	# result
+	ROW[${INDEX}]="$(zpool list -H | cut -f 1) $(zpool list -H | cut -f 2)"
+	(( INDEX ++ ))
+	ROW[${INDEX}]="$FREE $CAP-$HEALTH"
+	(( INDEX ++ ))
+	R_DEVICES=$(zpool status | grep sd | awk '{print "/dev/"$1}')
+fi
 
-R_DEVICES=$(zpool status | grep sd | awk '{print "/dev/"$1}')
+#-------------------------------------------------------------------------------
+# 4.2 Mdadm info
+# get mdadm info (btw you should use ZFS or Btrfs)
+# TODO add support for multiple pools ?
+#-------------------------------------------------------------------------------
+#
+# get current index count as start value
+if (( $MDADM_POOLS > 0 ))
+then
+	INDEX=${#ROW[@]}
+	# query
+	MDADM_INFO=$(mdadm -D /dev/md0)
+	R_LEVEL=$(echo "$MDADM_INFO"| grep -o "raid[0-9].*")
+	R_STATE=$(echo "$MDADM_INFO"| grep -o "State :.*")
+	R_DEVICES=$(echo "$MDADM_INFO"| grep -o " /dev/s.*")
+	# result
+	ROW[${INDEX}]="MD0 : ${R_LEVEL}"
+	(( INDEX ++ ))
+	ROW[${INDEX}]="${R_STATE}"
+	(( INDEX ++ ))
+fi
+
 
 #-------------------------------------------------------------------------------
 # 5. HDD temps
@@ -124,18 +170,21 @@ R_DEVICES=$(zpool status | grep sd | awk '{print "/dev/"$1}')
 #-------------------------------------------------------------------------------
 #
 # get current index count as start value
-INDEX=${#ROW[@]}
-# query
-DEVICES="${R_DEVICES}"
-DRIVE_TEMPS=$(echo $(hddtemp -n ${DEVICES}))
-TEMP_MAX=$(echo $DRIVE_TEMPS | sed -e 's/\s\+/\n/g' | sort -n | tail -n 1)
-TEMP_MIN=$(echo $DRIVE_TEMPS | sed -e 's/\s\+/\n/g' | sort -n | head -n 1)
-# result
-ROW[${INDEX}]="Drive Temp"
-(( INDEX ++ ))
-ROW[${INDEX}]="MIN: $TEMP_MIN MAX: $TEMP_MAX"
-(( INDEX ++ ))
-
+if [ "$R_DEVICES" != "" ]; then
+	INDEX=${#ROW[@]}
+	# query
+	DEVICES="${R_DEVICES}"
+	DRIVE_TEMPS=$(echo $(hddtemp -n ${DEVICES}))
+	TEMP_MAX=$(echo $DRIVE_TEMPS | sed -e 's/\s\+/\n/g' | sort -n | tail -n 1)
+	TEMP_MIN=$(echo $DRIVE_TEMPS | sed -e 's/\s\+/\n/g' | sort -n | head -n 1)
+	# result
+	ROW[${INDEX}]="Drive Temp"
+	(( INDEX ++ ))
+	ROW[${INDEX}]="MIN: $TEMP_MIN MAX: $TEMP_MAX"
+	(( INDEX ++ ))
+else
+	echo "No devices were found to probe for temperature !"
+fi
 #-------------------------------------------------------------------------------
 # 6. CPU load
 # get current cpu load
