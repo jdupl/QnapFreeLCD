@@ -335,9 +335,29 @@ do
         then
             # source/execute function library
             #
-            . ${INP_DIR}/${INP_FILE}
-            LOG_MSG[0]="Info  => (re-)read input!"
-            f_logwrite
+
+			# check if helper script exists
+			if [[ -x "${INP_DIR}/${INP_FILE}" ]]
+			then
+				. ${INP_DIR}/${INP_FILE}
+				LOG_MSG[0]="Info  => (re-)read input!"
+				f_logwrite
+			elif [[ -e "${INP_DIR}/${INP_FILE}" ]]
+			then
+				ROW[0]="${INP_DIR}/${INP_FILE}"
+				ROW[1]="Fix permissions"
+				ROW[2]="${INP_DIR}/${INP_FILE}"
+				ROW[3]="chmod +x"
+				LOG_MSG[0]="Error  => Helper file '${INP_DIR}/${INP_FILE}' not executable ! Please fix permissions"
+				f_logwrite
+			else
+				ROW[0]="${INP_DIR}/${INP_FILE}"
+				ROW[1]="does not exist"
+				ROW[2]="${INP_DIR}/${INP_FILE}"
+				ROW[3]="Create file"
+				LOG_MSG[0]="Error  => Helper file '${INP_DIR}/${INP_FILE}' does not exist ! Please create helper file or fallback to default script"
+				f_logwrite
+			fi
 
             # prepare raw messages for log writing
             #
