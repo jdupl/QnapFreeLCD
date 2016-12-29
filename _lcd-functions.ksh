@@ -132,7 +132,7 @@ fi
 
 if (( $(whereis mdadm | wc -w) != 1 ))
 then
-	MDADM_POOLS=$(ls /dev/md* | wc -w)
+	MDADM_POOLS=$(ls -1 /dev/md*  | egrep /dev/md'[0-9]+' | wc -l)
 	echo "Found $MDADM_POOLS mdadm pools !"
 fi
 
@@ -168,17 +168,20 @@ fi
 # get current index count as start value
 if (( $MDADM_POOLS > 0 ))
 then
-	INDEX=${#ROW[@]}
-	# query
-	MDADM_INFO=$(mdadm -D /dev/md0)
-	R_LEVEL=$(echo "$MDADM_INFO"| grep -o "raid[0-9].*")
-	R_STATE=$(echo "$MDADM_INFO"| grep -o "State :.*")
-	R_DEVICES=$(echo "$MDADM_INFO"| grep -o " /dev/s.*")
-	# result
-	ROW[${INDEX}]="MD0 : ${R_LEVEL}"
-	(( INDEX ++ ))
-	ROW[${INDEX}]="${R_STATE}"
-	(( INDEX ++ ))
+	for ARRAY in $(ls -1 /dev/md*  | egrep /dev/md'[0-9]+')
+	do
+		INDEX=${#ROW[@]}
+		# query
+		MDADM_INFO=$(mdadm -D $ARRAY)
+		R_LEVEL=$(echo "$MDADM_INFO"| grep -o "raid[0-9].*")
+		R_STATE=$(echo "$MDADM_INFO"| grep -o "State :.*")
+		R_DEVICES=$(echo "$MDADM_INFO"| grep -o " /dev/s.*")
+		# result
+		ROW[${INDEX}]="$(echo $ARRAY | cut -d "/" -f 3) : ${R_LEVEL}"
+		(( INDEX ++ ))
+		ROW[${INDEX}]="${R_STATE}"
+		(( INDEX ++ ))
+	done
 fi
 
 
