@@ -1,0 +1,11 @@
+[Unit]
+Description=LCD Display
+
+[Service]
+User=root
+Group=root
+Restart=on-failure
+ExecStart=/<path-to-script>/lcd-control.ksh
+
+[Install]
+WantedBy=multi-user.target
